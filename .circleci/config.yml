@@ -54,5 +54,4 @@ workflows:
           context:
             - CaptionPartners
           requires:
-            - code-quality-check
             - build-and-test
