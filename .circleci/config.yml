@@ -47,8 +47,12 @@ jobs:
 workflows:
   publish-package-to-code-artifact:
     jobs:
-      - build-and-test
+      - build-and-test:
+          context:
+            - CaptionPartners
       - pypi-publish:
-          filters:
-            branches:
-              only: main
+          context:
+            - CaptionPartners
+          requires:
+            - code-quality-check
+            - build-and-test
