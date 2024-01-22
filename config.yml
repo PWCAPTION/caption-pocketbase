@@ -1,0 +1,54 @@
+version: 2.1
+
+orbs:
+  python: circleci/python@2.1.1
+
+jobs:
+  code-quality-check:
+    docker:
+      - image: cimg/python:3.11.5
+    steps:
+      - checkout
+      - python/install-packages:
+          pkg-manager: poetry
+          args: "--only code-quality-check"
+      - run:
+          name: code-quality-check
+          command: |
+            poetry run black . --check --line-length 120
+            poetry run ruff check --line-length 120 .
+            poetry run mypy . --ignore-missing-imports
+            poetry run isort . --check
+  build-and-test:
+    docker:
+      - image: cimg/python:3.11.4
+    steps:
+      - checkout
+      - run:
+          name: setup poetry
+          command: poetry config http-basic.$JFROG_REPO_NAME $JFROG_USERNAME $JFROG_TOKEN
+      - python/install-packages:
+          pkg-manager: poetry
+      - run:
+          name: Run tests
+          command: |
+            poetry run pip3 install pytest
+            poetry run pytest
+  pypi-publish:
+    docker:
+      - image: cimg/python:3.11.4
+    steps:
+      - checkout
+      - run:
+          command: |
+            poetry build
+            pip3 install twine && twine upload --repository-url $JFROG_PUBLISH_URL dist/* -u $JFROG_USERNAME -p $JFROG_TOKEN
+
+workflows:
+  publish-package-to-code-artifact:
+    jobs:
+      - build-and-test
+      - pypi-publish:
+          filters:
+            branches:
+              only: main
